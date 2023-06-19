@@ -12,6 +12,16 @@ cursor = conn.cursor()
 users = cursor.execute("SELECT user_name FROM USERS").fetchall()
 names = [row[0] for row in users]
 
+
+
+ 
+
+async def say_hi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+     reply_keyboard = [["Привет"],["/start"]]
+     await update.message.reply_text("Привет", reply_markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard = True),)
+
+
+
 CHEK_PAL = range(1)
 
 # Функция старта
@@ -49,6 +59,6 @@ handler = ConversationHandler(
      ) 
 
 application.add_handler(handler)
-
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, say_hi))
 # Запуск бота
 application.run_polling()
