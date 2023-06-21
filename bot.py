@@ -17,8 +17,8 @@ names = [row[0] for row in users]
  
 
 async def say_hi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     reply_keyboard = [["Привет"],["/start"]]
-     await update.message.reply_text("Привет", reply_markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard = True),)
+     reply_keyboard = [["Привет"],["/start"],["/cancel"]]
+     await update.message.reply_text("Привет", reply_markup = ReplyKeyboardMarkup(reply_keyboard))
 
 
 
