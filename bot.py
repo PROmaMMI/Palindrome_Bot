@@ -2,63 +2,72 @@ from telegram import *
 from telegram.ext import *
 import sqlite3
 from set import TOKEN_BOT
+import random
 
-
-# Создание объекта Бот
 application = Application.builder().token(TOKEN_BOT).build()
 
 conn = sqlite3.connect('mydb.db')
 cursor = conn.cursor()
 users = cursor.execute("SELECT user_name FROM USERS").fetchall()
 names = [row[0] for row in users]
+SET_KEYBOARD, CHOICE, CHECK, GENERATE = range(4)
+button1 = "Проверка на палиндром"
+button2 = "Генерация рандомных 3-х букв"
+button3 = "/back"
+button4 = "/generate"
+keyboard1 = [[button1],[button2]]
+keyboard2 = [[button4, button3]]
+keyboard3 = [[button3]]
 
-
-
- 
-
-async def say_hi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     reply_keyboard = [["Привет"],["/start"],["/cancel"]]
-     await update.message.reply_text("Привет", reply_markup = ReplyKeyboardMarkup(reply_keyboard))
-
-
-
-CHEK_PAL = range(1)
-
-# Функция старта
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def cheсk_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      for i in names:
-          if i == update.effective_user.username:    
-               await update.message.reply_text(f'Привет, {update.effective_user.username}! Напиши слово, и я проверю его на палиндром!') 
-               return CHEK_PAL
+          if i == update.effective_user.username:
+               await update.message.reply_text(f'{update.effective_user.username}, выбирай, что хочешь!', 
+                                        reply_markup = ReplyKeyboardMarkup(keyboard1, one_time_keyboard=True))
+               return CHOICE
           else:
                await update.message.reply_text("Извини, но тебя нет в базе данных.")
                return ConversationHandler.END
           
+async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+     if update.message.text == button1:
+          await update.message.reply_text("Напиши слово или предложение и я его проверю на 'палиндромность'.")
+          return CHECK
+     if update.message.text == button2:
+          await update.message.reply_text("Haжми /generate, чтобы сгенерировать рандомное сочетание из 3-х букв.")
+          return GENERATE 
 
-# Проверка на палиндром 
-async def chek_pal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     if update.message.text.replace(' ','').lower() == ''.join(reversed(update.message.text.replace(' ','').lower())):
-          await update.message.reply_photo("https://imageup.ru/img280/4376986/yes.png")
-     else:
-          await update.message.reply_photo("https://imageup.ru/img76/4377006/no.jpg")
-
-
-# Выход из диалога
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     await update.message.reply_text("Спасибо, приходите еще!")
-     return ConversationHandler.END
-
+async def generate_rand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+     await update.message.reply_text(''.join((random.choice([chr(i) for i in range(ord('А'), ord("Я")+1)]) for x in range(3))), 
+                                             reply_markup = ReplyKeyboardMarkup(keyboard2))
  
-# Регистрация обработчика 
+async def check_pal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+     if update.message.text.replace(' ','').lower() == ''.join(reversed(update.message.text.replace(' ','').lower())):
+          await update.message.reply_photo("https://imageup.ru/img280/4376986/yes.png", reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
+     else:
+          await update.message.reply_photo("https://imageup.ru/img76/4377006/no.jpg", reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
+
 handler = ConversationHandler(
-     entry_points=[CommandHandler('start', start)],
+     entry_points=[CommandHandler('start', cheсk_users)],
      states={
-          CHEK_PAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, chek_pal)],
+          CHOICE:[ 
+               MessageHandler(
+                    filters.COMMAND | filters.Regex('^(Проверка на палиндром|Генерация рандомных 3-х букв)$'), choice
+               ),
+          ],
+          CHECK: [
+               MessageHandler(filters.TEXT & ~filters.COMMAND, check_pal),
+               CommandHandler('back', cheсk_users) 
+          ],
+          GENERATE: [
+               CommandHandler("generate", generate_rand),
+               CommandHandler("back", cheсk_users)
+          ],
      },
-     fallbacks=[CommandHandler('cancel', cancel)]
-     ) 
+     fallbacks=()
+     )
 
 application.add_handler(handler)
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, say_hi))
+
 # Запуск бота
 application.run_polling()
