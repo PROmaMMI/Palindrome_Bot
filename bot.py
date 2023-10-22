@@ -23,8 +23,7 @@ button7 = "Получить title сайта"
 keyboard1 = [[button1],[button2],[button5],[button7],[button6]]
 keyboard2 = [[button4, button3, button6]]
 keyboard3 = [[button3, button6]]
-title_start = "<title>"
-title_end = "</title>"
+
 
 async def cheсk_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      if update.effective_user.username in names:
@@ -84,8 +83,8 @@ async def receive_h1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def receive_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      txt = requests.get(f'{api_url}{update.message.text}',
                          headers={'X-Api-Key': "rM3mqjEHNHfDZsqRM7JdzQ==qEYv888pAeWcC884"}).text
-     start = txt.find(title_start.casefold()) + 7
-     end = txt.rfind(title_end.casefold())
+     start = txt.casefold().find("<title>") + 7
+     end = txt.casefold().rfind("</title>")
      await update.message.reply_text(txt[start:end].encode("utf-8").decode("unicode-escape"),
                                      reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
 
