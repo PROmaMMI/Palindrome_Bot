@@ -1,9 +1,10 @@
 from telegram import *
 from telegram.ext import *
 import sqlite3
-from set import TOKEN_BOT
+from set import TOKEN_BOT, API_NINJA
 import random
 import requests
+from clinica import Procedure1, Procedure2, Procedure3
 
 application = Application.builder().token(TOKEN_BOT).build()
 
@@ -12,7 +13,7 @@ cursor = conn.cursor()
 users = cursor.execute("SELECT user_name FROM USERS").fetchall()
 names = [row[0] for row in users]
 api_url = "https://api.api-ninjas.com/v1/webscraper?url="
-SET_KEYBOARD, CHOICE, CHECK, GENERATE, RECEIVE_H1, RECEIVE_TITLE = range(6)
+SET_KEYBOARD, CHOICE, CHECK, GENERATE, RECEIVE_H1, RECEIVE_TITLE, RECEIVE_PROCEDURE = range(7)
 button1 = "Проверка на палиндром"
 button2 = "Генерация рандомных 3-х букв"
 button3 = "/back"
@@ -20,7 +21,8 @@ button4 = "/generate"
 button5 = "Получить заголовок h1"
 button6 = "/exit"
 button7 = "Получить title сайта"
-keyboard1 = [[button1],[button2],[button5],[button7],[button6]]
+button8 = "Информация о процедурах"
+keyboard1 = [[button1],[button2],[button5],[button7],[button8],[button6],]
 keyboard2 = [[button4, button3, button6]]
 keyboard3 = [[button3, button6]]
 
@@ -54,6 +56,10 @@ async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
           await update.message.reply_text("Вставь ссылку и я вытащу title. ",
                                           reply_markup = ReplyKeyboardMarkup(keyboard3))
           return RECEIVE_TITLE
+     if update.message.text == button8:
+          await update.message.reply_text("Нажми /info и получи информацию о процедурах",
+                                          reply_markup = ReplyKeyboardMarkup(keyboard3))
+          return RECEIVE_PROCEDURE
      
      if update.message.text == button6:
           await update.message.reply_text("Приходите еще!",
@@ -74,7 +80,7 @@ async def check_pal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
           
 async def receive_h1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      txt = requests.get(f'{api_url}{update.message.text}',
-                         headers={'X-Api-Key': "rM3mqjEHNHfDZsqRM7JdzQ==qEYv888pAeWcC884"}).text
+                         headers={'X-Api-Key': API_NINJA}).text
      start = txt.find("<h1>") + 4
      end = txt.rfind("</h1>")
      await update.message.reply_text(txt[start:end],
@@ -82,10 +88,14 @@ async def receive_h1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
      
 async def receive_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      txt = requests.get(f'{api_url}{update.message.text}',
-                         headers={'X-Api-Key': "rM3mqjEHNHfDZsqRM7JdzQ==qEYv888pAeWcC884"}).text
+                         headers={'X-Api-Key': API_NINJA}).text
      start = txt.casefold().find("<title>") + 7
      end = txt.casefold().rfind("</title>")
      await update.message.reply_text(txt[start:end].encode("utf-8").decode("unicode-escape"),
+                                     reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
+     
+async def receive_procedure(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+     await update.message.reply_text(f"Процедуры:\n {Procedure1}\n{Procedure2}\n{Procedure3}",
                                      reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
 
 async def exit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -98,7 +108,7 @@ handler = ConversationHandler(
           CHOICE:[ 
                MessageHandler(
                     filters.COMMAND | filters.Regex(
-                         '^(Проверка на палиндром|Генерация рандомных 3-х букв|Получить заголовок h1|Получить title сайта)$'), choice
+                         '^(Проверка на палиндром|Генерация рандомных 3-х букв|Получить заголовок h1|Получить title сайта|Информация о процедурах)$'), choice
                ),
           ],
           CHECK: [
@@ -117,6 +127,10 @@ handler = ConversationHandler(
                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_title),
                CommandHandler('back', cheсk_users) 
           ],
+          RECEIVE_PROCEDURE: [
+               CommandHandler("info", receive_procedure),
+               CommandHandler('back', cheсk_users)
+          ]
      },
      fallbacks=[CommandHandler("exit", exit)],
      )
