@@ -1,4 +1,9 @@
 from datetime import date
+import requests
+import json
+
+resp = json.loads(requests.get('https://www.cbr-xml-daily.ru/daily_json.js').text)
+usd = resp.get('Valute').get('USD').get('Value')
 
 class Patient:
     def __init__(self, full_name, address, phone_number, extra_contact):
@@ -99,7 +104,7 @@ class Procedure:
         return all_cost
     
     def __str__(self):
-        return f"Название: {self._procedure_name}, Дата: {self._date}, Доктор: {self._doctor}, Стоимость: {self._cost}"
+        return f"Название: {self._procedure_name}; Дата: {self._date}; Доктор: {self._doctor}; Стоимость в рублях: {self._cost}; Стоимость в долларах: {round(self._cost / usd, 2)} "
 
 
 
