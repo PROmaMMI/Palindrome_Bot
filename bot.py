@@ -26,22 +26,22 @@ keyboard1 = [[button1],[button2],[button5],[button7],[button8],[button6],]
 keyboard2 = [[button4, button3, button6]]
 keyboard3 = [[button3, button6]]
 
-def randomaizer():
-     rand = random.randrange(10,100)
-     return rand
 
-async def cheсk_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def cheсk_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
      if update.effective_user.username in names:
-
+          context.user_data["rand1"] = random.randrange(10,100)
+          context.user_data["rand2"] = random.randrange(10,100)
+          rand1 = context.user_data["rand1"]
+          rand2 = context.user_data["rand2"]
+          await update.message.reply_text(f'{rand1} + {rand2} = ?')
           return CHECK_SUM
      else:
           await update.message.reply_text("Извини, тебя нет в бд.")
           return ConversationHandler.END
 
-async def check_sum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     rand1 = randomaizer() 
-     rand2 = randomaizer()
-     if int(update.message.text) == rand1 + rand2:
+async def check_sum(update: Update, context: ContextTypes.DEFAULT_TYPE):
+     if int(update.message.text) == context.user_data["rand1"] + context.user_data["rand2"] :
           await update.message.reply_text(f'{update.effective_user.username}, выбирай, что хочешь!', 
                                         reply_markup = ReplyKeyboardMarkup(keyboard1, one_time_keyboard=True))
           return CHOICE
