@@ -1,6 +1,7 @@
 from datetime import date
 import requests
 import json
+import csv
 
 resp = json.loads(requests.get('https://www.cbr-xml-daily.ru/daily_json.js').text)
 usd = resp.get('Valute').get('USD').get('Value')
@@ -104,18 +105,23 @@ class Procedure:
         return all_cost
     
     def __str__(self):
-        return f"Название: {self._procedure_name}; Дата: {self._date}; Доктор: {self._doctor}; Стоимость в рублях: {self._cost}; Стоимость в долларах: {round(self._cost / usd, 2)} "
-
-
+        return f"Название процедуры: {self._procedure_name}; Дата: {self._date}; Доктор: {self._doctor}; Цена(рубли): {self._cost}; Цена(доллары): {round(self._cost / usd, 2)} "
 
 
 Procedure1 = Procedure("Врачебный осмотр", date.today(), "Ирвин", 250)
 Procedure2 = Procedure("Рентгеноскопия", date.today(), "Джемисон", 500)
 Procedure3 = Procedure("Анализ крови", date.today(), "Смит", 200)
-House = Doctor("Доктор Хаус", "Хирург", 203, 899999999) 
 
+Procedures = [
+    Procedure("Врачебный осмотр", date.today(), "Ирвин", 250),
+    Procedure("Рентгеноскопия", date.today(), "Джемисон", 500),
+    Procedure("Анализ крови", date.today(), "Смит", 200)
+]
+def procedure_to_tuple(procedure):
+    return (procedure._procedure_name, procedure._date, procedure._doctor, procedure._cost, round(procedure._cost / usd, 2))
 
-
-
-
-
+with open("procedures.csv", mode = 'w') as procedures_file:
+    file_writer = csv.writer(procedures_file)
+    for procedure in Procedures:
+        row = procedure_to_tuple(procedure)
+        file_writer.writerow(row)
