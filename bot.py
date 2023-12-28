@@ -6,6 +6,7 @@ import random
 import requests
 from clinica import Procedure1, Procedure2, Procedure3
 
+
 application = Application.builder().token(TOKEN_BOT).build()
 
 conn = sqlite3.connect('mydb.db')
@@ -13,7 +14,7 @@ cursor = conn.cursor()
 users = cursor.execute("SELECT user_name FROM USERS").fetchall()
 names = [row[0] for row in users]
 api_url = "https://api.api-ninjas.com/v1/webscraper?url="
-CHOICE, CHECK_PAL, CHECK_SUM, GENERATE, RECEIVE_H1, RECEIVE_TITLE, RECEIVE_PROCEDURE = range(7)
+CHOICE, CHECK_PAL, CHECK_SUM, GENERATE, RECEIVE_H1, RECEIVE_TITLE, RECEIVE_PROCEDURE, RECEIVE_PROCEDURE_CSV = range(8)
 button1 = "Проверка на палиндром"
 button2 = "Генерация рандомных 3-х букв"
 button3 = "/back"
@@ -22,9 +23,12 @@ button5 = "Получить заголовок h1"
 button6 = "/exit"
 button7 = "Получить title сайта"
 button8 = "Информация о процедурах"
-keyboard1 = [[button1],[button2],[button5],[button7],[button8],[button6],]
+button9 = "Export"
+button10 = "Text"
+keyboard1 = [[button1],[button2],[button5],[button7],[button8],[button6]]
 keyboard2 = [[button4, button3, button6]]
 keyboard3 = [[button3, button6]]
+keyboard4 = [[button9], [button10],[button3, button6]]
 
 
 
@@ -71,10 +75,10 @@ async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                           reply_markup = ReplyKeyboardMarkup(keyboard3))
           return RECEIVE_TITLE
      if update.message.text == button8:
-          await update.message.reply_text("Нажми /info и получи информацию о процедурах",
-                                          reply_markup = ReplyKeyboardMarkup(keyboard3))
+          await update.message.reply_text("В каком формате?",
+                                          reply_markup = ReplyKeyboardMarkup(keyboard4))
           return RECEIVE_PROCEDURE
-     
+
      if update.message.text == button6:
           await update.message.reply_text("Приходите еще!",
                                           reply_markup=ReplyKeyboardRemove())
@@ -111,6 +115,10 @@ async def receive_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def receive_procedure(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      await update.message.reply_text(f"Процедуры:\n {Procedure1}\n{Procedure2}\n{Procedure3}",
                                      reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
+     
+async def receive_procedure_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
+     await update.message.reply_document(document='procedures.csv',
+                                         reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
 
 async def exit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
      await update.message.reply_text('Приходите еще!', reply_markup=ReplyKeyboardRemove())
@@ -145,7 +153,8 @@ handler = ConversationHandler(
                CommandHandler('back', cheсk_users) 
           ],
           RECEIVE_PROCEDURE: [
-               CommandHandler("info", receive_procedure),
+               MessageHandler(filters.Regex("Text"), receive_procedure),
+               MessageHandler(filters.Regex("Export"), receive_procedure_csv),
                CommandHandler('back', cheсk_users)
           ]
      },
