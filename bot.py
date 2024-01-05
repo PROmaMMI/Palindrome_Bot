@@ -1,11 +1,9 @@
-from telegram import *
-from telegram.ext import *
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Application, ContextTypes, ConversationHandler, CommandHandler, MessageHandler, filters
 import sqlite3
-from set import TOKEN_BOT, API_NINJA
+from set import TOKEN_BOT
 import random
-import requests
 from clinica import Procedure1, Procedure2, Procedure3
-
 
 application = Application.builder().token(TOKEN_BOT).build()
 
@@ -13,24 +11,15 @@ conn = sqlite3.connect('mydb.db')
 cursor = conn.cursor()
 users = cursor.execute("SELECT user_name FROM USERS").fetchall()
 names = [row[0] for row in users]
-api_url = "https://api.api-ninjas.com/v1/webscraper?url="
-CHOICE, CHECK_PAL, CHECK_SUM, GENERATE, RECEIVE_H1, RECEIVE_TITLE, RECEIVE_PROCEDURE, RECEIVE_PROCEDURE_CSV = range(8)
-button1 = "Проверка на палиндром"
-button2 = "Генерация рандомных 3-х букв"
-button3 = "/back"
-button4 = "/generate"
-button5 = "Получить заголовок h1"
-button6 = "/exit"
-button7 = "Получить title сайта"
-button8 = "Информация о процедурах"
-button9 = "Export"
-button10 = "Text"
-keyboard1 = [[button1],[button2],[button5],[button7],[button8],[button6]]
-keyboard2 = [[button4, button3, button6]]
-keyboard3 = [[button3, button6]]
-keyboard4 = [[button9], [button10],[button3, button6]]
-
-
+CHOICE, CHECK_SUM, RECEIVE_PROCEDURE = range(3)
+button1 = "Информация о процедурах"
+button2 = "Back"
+button3 = "Exit"
+button4 = "Export"
+button5 = "Text"
+keyboard1 = [[button1],[button3]]
+keyboard2 = [[button2, button3]]
+keyboard3 = [[button4], [button5],[button2, button3]]
 
 async def cheсk_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
      if update.effective_user.username in names:
@@ -45,82 +34,36 @@ async def cheсk_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
           return ConversationHandler.END
 
 async def check_sum(update: Update, context: ContextTypes.DEFAULT_TYPE):
-     if int(update.message.text) == context.user_data["rand1"] + context.user_data["rand2"] :
-          await update.message.reply_text(f'{update.effective_user.username}, выбирай, что хочешь!', 
+     try:
+          if int(update.message.text) == context.user_data["rand1"] + context.user_data["rand2"]:
+               await update.message.reply_text(f'{update.effective_user.username}, выбирай, что хочешь!', 
                                         reply_markup = ReplyKeyboardMarkup(keyboard1, one_time_keyboard=True))
-          return CHOICE
-     else:
+               return CHOICE
+          else:
+               await update.message.reply_text('Попробуй еще!')
+     except ValueError:
           await update.message.reply_text('Попробуй еще!')
-          return 
-     
-          
-async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
      if update.message.text == button1:
-          await update.message.reply_text("Напиши слово или предложение и я его проверю на 'палиндромность'.",
-                                          reply_markup = ReplyKeyboardMarkup(keyboard3))
-          return CHECK_PAL
-     
-     if update.message.text == button2:
-          await update.message.reply_text("Haжми /generate, чтобы сгенерировать рандомное сочетание из 3-х букв.",
-                                          reply_markup = ReplyKeyboardMarkup(keyboard3))           
-          return GENERATE 
-     
-     if update.message.text == button5:
-          await update.message.reply_text("Вставь ссылку и я вытащу заголовок h1.",
-                                          reply_markup = ReplyKeyboardMarkup(keyboard3))
-          return RECEIVE_H1
-     
-     if update.message.text == button7:
-          await update.message.reply_text("Вставь ссылку и я вытащу title. ",
-                                          reply_markup = ReplyKeyboardMarkup(keyboard3))
-          return RECEIVE_TITLE
-     if update.message.text == button8:
           await update.message.reply_text("В каком формате?",
-                                          reply_markup = ReplyKeyboardMarkup(keyboard4))
+                                          reply_markup = ReplyKeyboardMarkup(keyboard3))
           return RECEIVE_PROCEDURE
 
-     if update.message.text == button6:
+     if update.message.text == button3:
           await update.message.reply_text("Приходите еще!",
                                           reply_markup=ReplyKeyboardRemove())
           return ConversationHandler.END
-
-async def generate_rand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     await update.message.reply_text(''.join((random.choice([chr(i) for i in range(ord('А'), ord("Я")+1)]) for x in range(3))), 
-                                             reply_markup = ReplyKeyboardMarkup(keyboard2))
  
-async def check_pal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     if update.message.text.replace(' ','').lower() == ''.join(reversed(update.message.text.replace(' ','').lower())):
-          await update.message.reply_photo("https://imageup.ru/img280/4376986/yes.png", 
-                                           reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
-     else:
-          await update.message.reply_photo("https://imageup.ru/img76/4377006/no.jpg", 
-                                           reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
-          
-async def receive_h1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     txt = requests.get(f'{api_url}{update.message.text}',
-                         headers={'X-Api-Key': API_NINJA}).text
-     start = txt.find("<h1>") + 4
-     end = txt.rfind("</h1>")
-     await update.message.reply_text(txt[start:end],
-                                     reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
-     
-async def receive_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-     txt = requests.get(f'{api_url}{update.message.text}',
-                         headers={'X-Api-Key': API_NINJA}).text
-     start = txt.casefold().find("<title>") + 7
-     end = txt.casefold().rfind("</title>")
-     await update.message.reply_text(txt[start:end].encode("utf-8").decode("unicode-escape"),
-                                     reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
-     
-async def receive_procedure(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def receive_procedure(update: Update, context: ContextTypes.DEFAULT_TYPE):
      await update.message.reply_text(f"Процедуры:\n {Procedure1}\n{Procedure2}\n{Procedure3}",
-                                     reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
+                                     reply_markup = ReplyKeyboardMarkup(keyboard2, one_time_keyboard=True))
      
 async def receive_procedure_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
      await update.message.reply_document(document='procedures.csv',
-                                         reply_markup = ReplyKeyboardMarkup(keyboard3, one_time_keyboard=True))
+                                         reply_markup = ReplyKeyboardMarkup(keyboard2, one_time_keyboard=True))
 
-async def exit(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def exit(update: Update, context: ContextTypes.DEFAULT_TYPE):
      await update.message.reply_text('Приходите еще!', reply_markup=ReplyKeyboardRemove())
      return ConversationHandler.END
 
@@ -132,33 +75,15 @@ handler = ConversationHandler(
           ],
           CHOICE:[ 
                MessageHandler(
-                    filters.COMMAND | filters.Regex(
-                         '^(Проверка на палиндром|Генерация рандомных 3-х букв|Получить заголовок h1|Получить title сайта|Информация о процедурах)$'), choice
-               ),
-          ],
-          CHECK_PAL: [
-               MessageHandler(filters.TEXT & ~filters.COMMAND, check_pal),
-               CommandHandler('back', cheсk_users) 
-          ],
-          GENERATE: [
-               CommandHandler("generate", generate_rand),
-               CommandHandler('back', cheсk_users)
-          ],
-          RECEIVE_H1: [
-               MessageHandler(filters.TEXT & ~filters.COMMAND, receive_h1),
-               CommandHandler('back', cheсk_users) 
-          ],
-          RECEIVE_TITLE: [
-               MessageHandler(filters.TEXT & ~filters.COMMAND, receive_title),
-               CommandHandler('back', cheсk_users) 
+                    filters.Regex('Информация о процедурах'), choice),
           ],
           RECEIVE_PROCEDURE: [
                MessageHandler(filters.Regex("Text"), receive_procedure),
                MessageHandler(filters.Regex("Export"), receive_procedure_csv),
-               CommandHandler('back', cheсk_users)
+               MessageHandler(filters.Regex("Back"), cheсk_users)
           ]
      },
-     fallbacks=[CommandHandler("exit", exit)],
+     fallbacks=[MessageHandler(filters.Regex("Exit"), exit)],
      )
 
 application.add_handler(handler)
